@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Journal App</title>
+</head>
+<body>
+  <h1>Journal App</h1>
+
+<div id="auth">
+    <h2>Register</h2>
+    <input id="reg-username" placeholder="Username">
+    <input id="reg-password" type="password" placeholder="Password">
+    <button onclick="register()">Register</button>
+
+    <h2>Login</h2>
+    <input id="login-username" placeholder="Username">
+    <input id="login-password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="main" style="display:none;">
+    <h2>Welcome, <span id="user"></span>!</h2>
+    <button onclick="logout()">Logout</button>
+
+    <h3>Your Notes</h3>
+    <ul id="notes"></ul>
+
+    <textarea id="new-note" placeholder="Write your note..."></textarea><br>
+    <button onclick="createNote()">Add Note</button>
+  </div>
+
+  <script>
+    let token = null;
+    let secretKey = null;
+
+    async function register() {
+      const username = document.getElementById('reg-username').value;
+      const password = document.getElementById('reg-password').value;
+
+      const res = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      alert(data.message || data.error);
+    }
+
+    async function login() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        secretKey = password; // We use password to encrypt/decrypt notes
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        document.getElementById('user').innerText = username;
+        getNotes();
+      } else {
+        alert(data.error || "Login failed");
+      }
+    }
+
+    function logout() {
+      token = null;
+      secretKey = null;
+      document.getElementById('auth').style.display = 'block';
+      document.getElementById('main').style.display = 'none';
+    }
+
+    function encrypt(text) {
+      // super basic "encryption" — replace with crypto lib in real app
+      return btoa(unescape(encodeURIComponent(text + secretKey)));
+    }
+
+    function decrypt(text) {
+      try {
+        const raw = decodeURIComponent(escape(atob(text)));
+        return raw.replace(secretKey, '');
+      } catch {
+        return "[Failed to decrypt]";
+      }
+    }
+
+    async function getNotes() {
+      const res = await fetch('/notes', {
+        headers: { 'Authorization': token }
+      });
+
+      const data = await res.json();
+      const list = document.getElementById('notes');
+      list.innerHTML = '';
+
+      data.forEach(note => {
+        const li = document.createElement('li');
+        li.innerText = decrypt(note.content);
+        list.appendChild(li);
+      });
+    }
+
+    async function createNote() {
+      const content = document.getElementById('new-note').value;
+      const encrypted = encrypt(content);
+
+      const res = await fetch('/notes', {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: encrypted })
+      });
+
+      if (res.ok) {
+        document.getElementById('new-note').value = '';
+        getNotes();
+      } else {
+        alert("Failed to create note");
+      }
+    }
+  </script>
+</body>
+</html>
