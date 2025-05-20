@@ -6,9 +6,9 @@ This is not a new or novel idea, and it's probably not hard, but as an electrica
 Oh, this needs to be free to make and free to use too.
 
 ## Desired functions:
--Sign up / Log in
--Create a note
--View all notes
--Edit a note
--Delete a note
--Notes are encrypted before leaving the browser
+- Sign up / Log in
+- Create a note
+- View all notes
+- Edit a note
+- Delete a note
+- Notes are encrypted before leaving the browser
